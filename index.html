@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroForge API Docs</title>
+    <style>
+        body { font-family: monospace; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #0d1117; color: #c9d1d9; }
+        pre { background: #161b22; padding: 1rem; overflow-x: auto; border: 1px solid #30363d; border-radius: 6px; }
+        h2 { color: #58a6ff; }
+    </style>
+</head>
+<body>
+    <h1> AeroForge API</h1>
+    <p>The aerospace validation and telemetry engine.</p>
+    
+    <h2>GET /parts</h2>
+    <p>Returns the catalog of standard aerospace components.</p>
+    
+    <h2>GET /telemetry</h2>
+    <p>Returns simulated live telemetry for tracking interfaces.</p>
+    
+    <h2>POST /validate</h2>
+    <p>Validates a CAD design against strict engineering tolerances.</p>
+    <p><strong>Example Request:</strong></p>
+    <pre>
+curl -X POST http://localhost:8080/validate \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Ariane6_Booster","geometry":"demi-cone avec un rectangle au bout"}'
+    </pre>
+</body>
+</html>
