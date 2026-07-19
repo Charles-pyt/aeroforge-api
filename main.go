@@ -13,11 +13,17 @@ type AerospacePart struct {
 	Geometry   string  `json:"geometry"`
 	GapSpacing float64 `json:"gap_spacing,omitempty"`
 }
+type ISSLiveTelemetry struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Altitude  float64 `json:"altitude"`
+	Velocity  float64 `json:"velocity"`
+}
 
 // Helpers
 // Send format text in jSON with the right HTTP code
 func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Typer", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
 }
@@ -52,12 +58,32 @@ func getPartsHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, parts)
 }
 
-// GET 2 : Send telemetry
+// Get 2
 func getTelemetryHandler(w http.ResponseWriter, r *http.Request) {
+	resp, err := http.Get("https://api.wheretheiss.at/v1/satellites/25544")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to contact ISS telemetry servers")
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		writeError(w, http.StatusBadGateway, "Bad response from ISS tracking station")
+		return
+	}
+
+	var issData ISSLiveTelemetry
+	if err := json.NewDecoder(resp.Body).Decode(&issData); err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to decode ISS telemetry data")
+		return
+	}
 	telemetry := map[string]interface{}{
-		"status":    "NOMINAL",
-		"alititude": 408.5,
-		"velocity":  27600,
+		"status":      "NOMINAL",
+		"data_source": "Live ISS Tracker",
+		"altitude_km": issData.Altitude,
+		"velocity_kh": issData.Velocity,
+		"latitude":    issData.Latitude,
+		"longitude":   issData.Longitude,
 	}
 	writeJSON(w, http.StatusOK, telemetry)
 }
@@ -69,7 +95,7 @@ func getWelcomeHandler(w http.ResponseWriter, r *http.Request) {
 		user = "Engineer"
 	}
 	message := map[string]string{
-		"message": fmt.Sprintf("Welcome to Aeroforge Control, %s!", user),
+		"message": fmt.Sprintf("Welcome to AeroForge Control, %s!", user),
 	}
 	writeJSON(w, http.StatusOK, message)
 }
