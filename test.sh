@@ -14,7 +14,7 @@ echo -e "${BLUE}=== Launching Automated AeroForge Tests ===${NC}\n"
 echo -e "${BLUE}[TEST 1] GET /welcome?user=Charles${NC}"
 RESPONSE=$(curl -s "$BASE_URL/welcome?user=Charles")
 echo "Response: $RESPONSE"
-if [[ $RESPONSE == *"Welcome to Aeroforge Control, Charles!"* ]]; then
+if [[ $RESPONSE == *"Welcome to AeroForge Control, Charles!"* ]]; then
     echo -e "${GREEN}-> SUCCESS${NC}\n"
 else
     echo -e "${RED}-> FAILURE${NC}\n"

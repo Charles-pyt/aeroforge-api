@@ -13,11 +13,13 @@ type AerospacePart struct {
 	Geometry   string  `json:"geometry"`
 	GapSpacing float64 `json:"gap_spacing,omitempty"`
 }
-type ISSLiveTelemetry struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Altitude  float64 `json:"altitude"`
-	Velocity  float64 `json:"velocity"`
+type OpenNotifyISS struct {
+	Message     string `json:"message"`
+	Timestamp   int64  `json:"timestamp"`
+	ISSPosition struct {
+		Latitude  string `json:"latitude"`
+		Longitude string `json:"longitude"`
+	} `json:"iss_position"`
 }
 
 // Helpers
@@ -58,9 +60,24 @@ func getPartsHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, parts)
 }
 
-// Get 2
+// GET 2 : Send live telemetry by fetching external ISS API
+// GET 2 : Send live telemetry by fetching external Open Notify ISS API
 func getTelemetryHandler(w http.ResponseWriter, r *http.Request) {
-	resp, err := http.Get("https://api.wheretheiss.at/v1/satellites/25544")
+	// 1. Create a custom HTTP client
+	client := &http.Client{}
+
+	// 2. Prepare the request manually
+	req, err := http.NewRequest("GET", "http://api.open-notify.org/iss-now.json", nil)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to create telemetry request")
+		return
+	}
+
+	// 3. FORCE THE USER-AGENT (This mimics your curl command and bypasses the block)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+
+	// 4. Execute the request
+	resp, err := client.Do(req)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to contact ISS telemetry servers")
 		return
@@ -72,19 +89,22 @@ func getTelemetryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var issData ISSLiveTelemetry
-	if err := json.NewDecoder(resp.Body).Decode(&issData); err != nil {
+	// 5. Decode the JSON response
+	var openNotifyData OpenNotifyISS
+	if err := json.NewDecoder(resp.Body).Decode(&openNotifyData); err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to decode ISS telemetry data")
 		return
 	}
+
+	// 6. Return the clean data
 	telemetry := map[string]interface{}{
 		"status":      "NOMINAL",
-		"data_source": "Live ISS Tracker",
-		"altitude_km": issData.Altitude,
-		"velocity_kh": issData.Velocity,
-		"latitude":    issData.Latitude,
-		"longitude":   issData.Longitude,
+		"data_source": "Live Open Notify ISS API",
+		"timestamp":   openNotifyData.Timestamp,
+		"latitude":    openNotifyData.ISSPosition.Latitude,
+		"longitude":   openNotifyData.ISSPosition.Longitude,
 	}
+
 	writeJSON(w, http.StatusOK, telemetry)
 }
 
@@ -95,8 +115,8 @@ func getWelcomeHandler(w http.ResponseWriter, r *http.Request) {
 		user = "Engineer"
 	}
 	message := map[string]string{
-		"message": fmt.Sprintf("Welcome to AeroForge Control, %s!", user),
-	}
+    "message": fmt.Sprintf("Welcome to AeroForge Control, %s!", user),
+}
 	writeJSON(w, http.StatusOK, message)
 }
 
