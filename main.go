@@ -46,7 +46,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 // GET 1 : Send pieces
 func getPartsHandler(w http.ResponseWriter, r *http.Request) {
 	parts := []AerospacePart{
-		{ID: "A6-BST", Name: "Ariane6_Booster", Geometry: "demi-cone avec un rectangle au bout"},
+		{ID: "A6-BST", Name: "Ariane6_Booster", Geometry: "half-cone-rectangular"},
 		{ID: "JWST-MIR", Name: "JWST_Mirror_Assembly", GapSpacing: 0.519},
 	}
 	writeJSON(w, http.StatusOK, parts)
@@ -75,6 +75,29 @@ func getWelcomeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST
+func validatePartHandler(w http.ResponseWriter, r *http.Request) {
+	var part AerospacePart
+
+	if err := json.NewDecoder(r.Body).Decode(&part); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid JSON format")
+		return
+	}
+	if part.Name == "Ariane6_Booster" && part.Geometry != "half-cone-rectangular" {
+		writeError(w, http.StatusNotAcceptable, "CRITICAL ERROR: Booster geometry must be a half-cone with rectangular ends.")
+		return
+	}
+
+	if part.Name == "JWST_Mirror_Assembly" && part.GapSpacing != 0.519 {
+		writeError(w, http.StatusNotAcceptable, "CRITICAL ERROR: Mirror gap spacing must be exactly 0.519mm for thermal expansion.")
+		return
+	}
+
+	// If coorect
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status":  "APPROVED",
+		"message": fmt.Sprintf("Design %s passed all tolerances and is ready for manufacturing.", part.Name),
+	})
+}
 
 // Main func
 func main() {
@@ -85,6 +108,7 @@ func main() {
 	mux.HandleFunc("GET /parts", getPartsHandler)
 	mux.HandleFunc("GET /telemetry", getTelemetryHandler)
 	mux.HandleFunc("GET /welcome", getWelcomeHandler)
+	mux.HandleFunc("POST /validate", validatePartHandler)
 
 	// ROutes for the documentation
 	mux.HandleFunc("GET /docs", func(w http.ResponseWriter, r *http.Request) {
